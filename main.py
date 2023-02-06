@@ -96,11 +96,11 @@ def preprocess_data(model_type, inq_df_td):
         #print('the columns above are to be omitted due to high count of missing values')
 
         missing_values_td = inq_df_td.isnull().sum()/len(inq_df_td)
-        print(missing_values_td[missing_values_td != 0])
+        #print(missing_values_td[missing_values_td != 0])
 
         # imputation
         col_names_for_imputation = [
-            'TERRITORY', 'sex', 'avg_income', 'distance']
+            'TERRITORY', 'avg_income', 'distance']
 
         inq_df_td[col_names_for_imputation] = inq_df_td[col_names_for_imputation].fillna(
             inq_df_td[col_names_for_imputation].mean())
@@ -109,7 +109,8 @@ def preprocess_data(model_type, inq_df_td):
         # important note: Ethnicity has the top value to be "C" I will impute NA's based on that.
         # imputing nominal variable
         inq_df_td['ETHNICITY'] = inq_df_td['ETHNICITY'].fillna('C')
-
+        inq_df_td['TERRITORY'] = inq_df_td['TERRITORY'].fillna('2')
+        inq_df_td['sex'] = inq_df_td['sex'].fillna(1.0)
         # removing the columns that have missing values over the set threshold of 25%
         inq_df_td = inq_df_td.drop(['ACADEMIC_INTEREST_1', 'ACADEMIC_INTEREST_2',
                                     'satscore', 'telecq', 'IRSCHOOL', 'CONTACT_CODE1', 'CONTACT_DATE'], axis=1)
@@ -118,7 +119,8 @@ def preprocess_data(model_type, inq_df_td):
         # next I will generate dummy variables from ethnicity column
         # print(inq_df_td['ETHNICITY'].unique())
 
-        dummy_data_td = pd.get_dummies(inq_df_td[['ETHNICITY']])
+        dummy_data_td = pd.get_dummies(
+            inq_df_td[['ETHNICITY', 'TERRITORY', 'sex']])
         # print(dummy_data_td.describe())
         # print(dummy_data_td)
 
@@ -129,22 +131,48 @@ def preprocess_data(model_type, inq_df_td):
 
         # dop the ethnicity column as I have added dummy vars, I will also drop a random variable among the Enthnicity ones
         # to avoid multicollinearity.
-        X_td = X_td.drop(['ETHNICITY', 'ETHNICITY_I'], axis=1)
+
+        X_td = X_td.drop(['ETHNICITY', 'ETHNICITY_I',
+                         'TERRITORY', "TERRITORY_N", 'LEVEL_YEAR'], axis=1)
 
         # eliminate negative values from distance
         #X_td['distance'] = X_td['distance'].apply(combine)
         skewness_df_td = X_td.skew(skipna=True)
 
-        # print(skewness_df_td.columns())
+        (skewness_df_td)
 
-        skewed_cols = []
+        skewed_vars_list = ['int1rat',
+                            'int2rat',
+                            'hscrat',
+                            'avg_income',
+                            'distance']
 
         #print(X_td.hist(bins=X_td.shape[1], figsize=(15, 10)))
-        print(X_td['distance'].describe(include='all'))
-        print(X_td.head().to_string())
+        # print(X_td['distance'].describe(include='all'))
+
+        # print(skewness_df_td.head().to_string())
+
+        for col in skewed_vars_list:
+            X_td[col] = np.log(X_td[col])
+
+        print(skewness_df_td)
+        # calculating vif
+
+        # vif_data = pd.DataFrame()  # create a empty data frame
+
+        # # create column feature with variable names
+        # vif_data['feature'] = X_td.columns
+        # vif_data['VIF'] = [variance_inflation_factor(
+        #     X_td.values, i) for i in range(len(X_td.columns))]
+
+        # vif_data
+
+        return X_td
 
         # will prob need to drop this column
-        print(X_td['TERRITORY'].unique())
+        #print(X_td.isnull().mean() * 100)
+
+        # print(X_td['stucell'].unique())
 
         # plt.show()
 
