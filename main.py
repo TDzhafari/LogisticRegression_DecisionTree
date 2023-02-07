@@ -19,6 +19,9 @@ import statsmodels.api as sm
 import numpy as np
 from pathlib import Path
 from statsmodels.stats.outliers_influence import variance_inflation_factor
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import confusion_matrix, accuracy_score
 
 #############################################################################
 #                           Main logic
@@ -40,7 +43,28 @@ def main_func():
     except FileNotFoundError:
         print('Please make sure inq2015.csv is named correctly and located in the same folder with this script or provide a full path to the file.')
 
-    preprocess_data('logistic regression', df_td)
+    clean_dataset_td = preprocess_data('logistic regression', df_td)
+
+    # Split the data into features (X) and target (y)
+    X = clean_dataset_td.drop("Enroll", axis=1)
+    y = clean_dataset_td["Enroll"]
+
+    # Split the data into training and test sets
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=0)
+
+    # Train the logistic regression model on the training data
+    model = LogisticRegression(solver='lbfgs')
+    model.fit(X_train, y_train)
+
+    # Predict the target values for the test data
+    y_pred = model.predict(X_test)
+
+    # Evaluate the model performance using accuracy score and confusion matrix
+    print("Accuracy:", accuracy_score(y_test, y_pred))
+    print("Confusion Matrix:")
+    print(confusion_matrix(y_test, y_pred))
+
 
 ############################################################################
 #                           Helper functions
@@ -112,9 +136,9 @@ def preprocess_data(model_type, inq_df_td):
         inq_df_td['TERRITORY'] = inq_df_td['TERRITORY'].fillna('2')
         inq_df_td['sex'] = inq_df_td['sex'].fillna(1.0)
         # removing the columns that have missing values over the set threshold of 25%
+        print(inq_df_td.columns)
         inq_df_td = inq_df_td.drop(['ACADEMIC_INTEREST_1', 'ACADEMIC_INTEREST_2',
                                     'satscore', 'telecq', 'IRSCHOOL', 'CONTACT_CODE1', 'CONTACT_DATE'], axis=1)
-        inq_df_td.columns
 
         # next I will generate dummy variables from ethnicity column
         # print(inq_df_td['ETHNICITY'].unique())
@@ -133,13 +157,11 @@ def preprocess_data(model_type, inq_df_td):
         # to avoid multicollinearity.
 
         X_td = X_td.drop(['ETHNICITY', 'ETHNICITY_I',
-                         'TERRITORY', "TERRITORY_N", 'LEVEL_YEAR'], axis=1)
+                         'TERRITORY', "TERRITORY_N", 'LEVEL_YEAR', 'sex'], axis=1)
 
         # eliminate negative values from distance
         #X_td['distance'] = X_td['distance'].apply(combine)
         skewness_df_td = X_td.skew(skipna=True)
-
-        (skewness_df_td)
 
         skewed_vars_list = ['int1rat',
                             'int2rat',
