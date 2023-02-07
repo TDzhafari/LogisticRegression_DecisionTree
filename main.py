@@ -21,6 +21,7 @@ from pathlib import Path
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import confusion_matrix, accuracy_score
 
 #############################################################################
@@ -45,6 +46,7 @@ def main_func():
 
     clean_dataset_td = preprocess_data('logistic regression', df_td)
 
+    # print(clean_dataset_td[np.isinf(clean_dataset_td).any(1)].to_string())
     # Split the data into features (X) and target (y)
     X = clean_dataset_td.drop("Enroll", axis=1)
     y = clean_dataset_td["Enroll"]
@@ -135,8 +137,8 @@ def preprocess_data(model_type, inq_df_td):
         inq_df_td['ETHNICITY'] = inq_df_td['ETHNICITY'].fillna('C')
         inq_df_td['TERRITORY'] = inq_df_td['TERRITORY'].fillna('2')
         inq_df_td['sex'] = inq_df_td['sex'].fillna(1.0)
+
         # removing the columns that have missing values over the set threshold of 25%
-        print(inq_df_td.columns)
         inq_df_td = inq_df_td.drop(['ACADEMIC_INTEREST_1', 'ACADEMIC_INTEREST_2',
                                     'satscore', 'telecq', 'IRSCHOOL', 'CONTACT_CODE1', 'CONTACT_DATE'], axis=1)
 
@@ -144,7 +146,7 @@ def preprocess_data(model_type, inq_df_td):
         # print(inq_df_td['ETHNICITY'].unique())
 
         dummy_data_td = pd.get_dummies(
-            inq_df_td[['ETHNICITY', 'TERRITORY', 'sex']])
+            inq_df_td[['ETHNICITY', 'TERRITORY', 'Instate']])
         # print(dummy_data_td.describe())
         # print(dummy_data_td)
 
@@ -157,7 +159,9 @@ def preprocess_data(model_type, inq_df_td):
         # to avoid multicollinearity.
 
         X_td = X_td.drop(['ETHNICITY', 'ETHNICITY_I',
-                         'TERRITORY', "TERRITORY_N", 'LEVEL_YEAR', 'sex'], axis=1)
+                         'TERRITORY', "TERRITORY_N", 'LEVEL_YEAR', 'Instate_N', 'Instate'], axis=1)
+
+        X_td['sex'] = X_td['sex'].astype(int)
 
         # eliminate negative values from distance
         #X_td['distance'] = X_td['distance'].apply(combine)
@@ -174,8 +178,17 @@ def preprocess_data(model_type, inq_df_td):
 
         # print(skewness_df_td.head().to_string())
 
+        X_td['int1rat'] = X_td['int1rat'].apply(combine)
+        X_td['int2rat'] = X_td['int2rat'].apply(combine)
+        X_td['hscrat'] = X_td['hscrat'].apply(combine)
+
+        X_td.loc[X_td['int1rat'] == -np.inf, 'int1rat'] = 0
+
+        X_td = X_td[~(
+            np.isinf(X_td).any(axis=1))]
+
         for col in skewed_vars_list:
-            X_td[col] = np.log(X_td[col])
+            X_td[col] = np.log(X_td[col]).astype(np.float32)
 
         print(skewness_df_td)
         # calculating vif
@@ -207,6 +220,9 @@ def combine(x):
         return 1
     else:
         return 0
+
+
+def run_log_reg():
 
 
 main_func()
