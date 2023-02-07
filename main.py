@@ -9,6 +9,10 @@
 #
 ############################################################################
 
+# todo:
+# 1) create separate function for log reg and decision tree
+# 2) clean up code, use black, pylint, bandit
+
 ############################################################################
 #                           Dependencies
 ############################################################################
@@ -21,7 +25,8 @@ from pathlib import Path
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
-from sklearn.tree import DecisionTreeClassifier
+from sklearn import tree
+from sklearn.tree import export_text
 from sklearn.metrics import confusion_matrix, accuracy_score
 
 #############################################################################
@@ -46,6 +51,16 @@ def main_func():
 
     clean_dataset_td = preprocess_data('logistic regression', df_td)
 
+    clean_dataset_td = clean_dataset_td[~(
+        np.isinf(clean_dataset_td).any(axis=1))]
+
+
+# EACH OF THE BLOCKS BELOW IS TO BE MOVED TO THEIR OWN RESPECTIVE FUNCTIONS
+
+    ###############################
+    #  logistic regression        #
+    ###############################
+
     # print(clean_dataset_td[np.isinf(clean_dataset_td).any(1)].to_string())
     # Split the data into features (X) and target (y)
     X = clean_dataset_td.drop("Enroll", axis=1)
@@ -63,10 +78,32 @@ def main_func():
     y_pred = model.predict(X_test)
 
     # Evaluate the model performance using accuracy score and confusion matrix
+    dtree.score(X_test, y_test)  # accuracy
+    tn, fp, fn, tp = confusion_matrix(y_test, prediction).ravel()
+
+    specificity = tn / (tn+fp)
+
     print("Accuracy:", accuracy_score(y_test, y_pred))
+    print(f'Specificity is: {specificity}')
     print("Confusion Matrix:")
     print(confusion_matrix(y_test, y_pred))
 
+    ###############################
+    #       decision tree         #
+    ###############################
+    dtree = tree.DecisionTreeClassifier(
+        max_depth=4, min_samples_split=30, random_state=0)
+    dtree = dtree.fit(X_train, y_train)
+    r = export_text(dtree, feature_names=list(X_train.columns.values))
+
+    print(r)
+    prediction = dtree.predict(X_test)
+    print(confusion_matrix(y_test, prediction))
+    dtree.score(X_test, y_test)  # accuracy
+    tn, fp, fn, tp = confusion_matrix(y_test, prediction).ravel()
+
+    specificity = tn / (tn+fp)
+    print(f'Specificity is: {specificity}')
 
 ############################################################################
 #                           Helper functions
@@ -184,9 +221,6 @@ def preprocess_data(model_type, inq_df_td):
 
         X_td.loc[X_td['int1rat'] == -np.inf, 'int1rat'] = 0
 
-        X_td = X_td[~(
-            np.isinf(X_td).any(axis=1))]
-
         for col in skewed_vars_list:
             X_td[col] = np.log(X_td[col]).astype(np.float32)
 
@@ -222,7 +256,14 @@ def combine(x):
         return 0
 
 
-def run_log_reg():
+def combine(x):
+    """
+    helper function that will be used to eliminate negative values for a column in the dataset.
+    """
+    if x > 0:
+        return 1
+    else:
+        return 0
 
 
 main_func()
