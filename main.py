@@ -51,6 +51,7 @@ def main_func():
 
     clean_dataset_td = preprocess_data('logistic regression', df_td)
 
+    print(clean_dataset_td.dtypes)
     clean_dataset_td = clean_dataset_td[~(
         np.isinf(clean_dataset_td).any(axis=1))]
 
@@ -71,15 +72,14 @@ def main_func():
         X, y, test_size=0.2, random_state=0)
 
     # Train the logistic regression model on the training data
-    model = LogisticRegression(solver='lbfgs')
-    model.fit(X_train, y_train)
+    model_td = LogisticRegression(solver='lbfgs')
+    model_td.fit(X_train, y_train)
 
     # Predict the target values for the test data
-    y_pred = model.predict(X_test)
+    y_pred = model_td.predict(X_test)
 
     # Evaluate the model performance using accuracy score and confusion matrix
-    dtree.score(X_test, y_test)  # accuracy
-    tn, fp, fn, tp = confusion_matrix(y_test, prediction).ravel()
+    tn, fp, fn, tp = confusion_matrix(y_test, y_pred).ravel()
 
     specificity = tn / (tn+fp)
 
@@ -91,19 +91,27 @@ def main_func():
     ###############################
     #       decision tree         #
     ###############################
-    dtree = tree.DecisionTreeClassifier(
+    dtree_td = tree.DecisionTreeClassifier(
         max_depth=4, min_samples_split=30, random_state=0)
-    dtree = dtree.fit(X_train, y_train)
-    r = export_text(dtree, feature_names=list(X_train.columns.values))
+    dtree_td = dtree_td.fit(X_train, y_train)
+    r = export_text(dtree_td, feature_names=list(X_train.columns.values))
 
     print(r)
-    prediction = dtree.predict(X_test)
+    prediction = dtree_td.predict(X_test)
     print(confusion_matrix(y_test, prediction))
-    dtree.score(X_test, y_test)  # accuracy
+    dtree_td.score(X_test, y_test)  # accuracy
     tn, fp, fn, tp = confusion_matrix(y_test, prediction).ravel()
-
     specificity = tn / (tn+fp)
     print(f'Specificity is: {specificity}')
+    print(f'Accuracy is: {accuracy_score(y_test, prediction)}')
+
+    plt.figure(figsize=[25, 20])
+
+    tree.plot_tree(dtree_td,
+                   feature_names=list(X_train.columns.values),
+                   class_names=True,
+                   filled=True)
+    plt.show()
 
 ############################################################################
 #                           Helper functions
@@ -244,16 +252,6 @@ def preprocess_data(model_type, inq_df_td):
         # print(X_td['stucell'].unique())
 
         # plt.show()
-
-
-def combine(x):
-    """
-    helper function that will be used to eliminate negative values for a column in the dataset.
-    """
-    if x > 0:
-        return 1
-    else:
-        return 0
 
 
 def combine(x):
